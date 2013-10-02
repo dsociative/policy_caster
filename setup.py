@@ -6,6 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='policy_caster',
+    version='1.0',
     description='policy caster for flash clients',
     author='dsociative',
     author_email='admin@geektech.ru',

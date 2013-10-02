@@ -3,6 +3,7 @@
 
 from __future__ import with_statement
 
+import os
 import sys
 import optparse
 import socket
@@ -11,6 +12,7 @@ import exceptions
 import contextlib
 
 VERSION = 0.1
+
 
 class PolicyCaster(object):
     def __init__(self, port, path):
@@ -29,22 +31,26 @@ class PolicyCaster(object):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(('', port))
         self.sock.listen(5)
+
     def read_policy(self, path):
         with file(path, 'rb') as f:
             policy = f.read(10001)
             if len(policy) > 10000:
-                raise exceptions.RuntimeError('File probably too large to be a policy file',
-                                              path)
+                raise exceptions.RuntimeError(
+                    'File probably too large to be a policy file',
+                    path)
             if 'cross-domain-policy' not in policy:
                 raise exceptions.RuntimeError('Not a valid policy file',
                                               path)
             return policy
+
     def run(self):
         try:
             while True:
                 thread.start_new_thread(self.handle, self.sock.accept())
         except socket.error, e:
             self.log('Error accepting connection: %s' % (e[1],))
+
     def handle(self, conn, addr):
         addrstr = '%s:%s' % (addr[0], addr[1])
         try:
@@ -54,7 +60,8 @@ class PolicyCaster(object):
                 # a single recv, but very unlikely.
                 request = conn.recv(1024).strip()
                 if request != '<policy-file-request/>\0':
-                    self.log('Unrecognized request from %s: %s' % (addrstr, request))
+                    self.log(
+                        'Unrecognized request from %s: %s' % (addrstr, request))
                     return
                 self.log('Valid request received from %s' % (addrstr,))
                 conn.sendall(self.policy)
@@ -63,15 +70,19 @@ class PolicyCaster(object):
             self.log('Error handling connection from %s: %s' % (addrstr, e[1]))
         except Exception, e:
             self.log('Error handling connection from %s: %s' % (addrstr, e[1]))
+
     def log(self, str):
         print >> sys.stderr, str
 
+
 def main():
+    root = os.path.dirname(__file__)
     parser = optparse.OptionParser(usage='%prog [--port=PORT] --file=FILE',
                                    version='%prog ' + str(VERSION))
     parser.add_option('-p', '--port', dest='port', type=int, default=843,
                       help='listen on port PORT', metavar='PORT')
     parser.add_option('-f', '--file', dest='path',
+                      default=os.path.join(root, 'policy.xml'),
                       help='server policy file FILE', metavar='FILE')
     opts, args = parser.parse_args()
     if args:
